@@ -1,0 +1,265 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "adfkyndryl"
+		},
+		"lnk_synapse_properties_typeProperties_endpoint": {
+			"type": "string",
+			"defaultValue": "https://synwkyndryl.dev.azuresynapse.net"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_data_parameters')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Notebook1",
+						"type": "SynapseNotebook",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": {
+									"value": "aprovisionamiento",
+									"type": "Expression"
+								},
+								"type": "NotebookReference"
+							},
+							"parameters": {
+								"name_database": {
+									"value": "staging",
+									"type": "string"
+								},
+								"location_database": {
+									"value": "abfss://staging@stakyndryl.dfs.core.windows.net/database/staging/",
+									"type": "string"
+								},
+								"name_table": {
+									"value": "SalesOrderHeader5",
+									"type": "string"
+								},
+								"location_table": {
+									"value": "abfss://staging@stakyndryl.dfs.core.windows.net/SalesOrderHeader5",
+									"type": "string"
+								},
+								"schema_table": {
+									"value": "SalesOrderID string,\nRevisionNumber string,\nOrderDate string,\nDueDate string,\nShipDate string,\nStatus string,\nOnlineOrderFlag string,\nSalesOrderNumber string,\nPurchaseOrderNumber string,\nAccountNumber string,    \nCustomerID string,\nShipToAddressID string,\nBillToAddressID string,\nShipMethod string,     \nCreditCardApprovalCode string,\nSubTotal string,\nTaxAmt string,\nFreight string,\nTotalDue string,\nComment string, \nrowguid string,\nModifiedDate string,\nauditDate timestamp",
+									"type": "string"
+								}
+							},
+							"snapshot": true,
+							"sparkPool": {
+								"referenceName": {
+									"value": "kyndryl",
+									"type": "Expression"
+								},
+								"type": "BigDataPoolReference"
+							},
+							"conf": {
+								"spark.dynamicAllocation.enabled": null,
+								"spark.dynamicAllocation.minExecutors": null,
+								"spark.dynamicAllocation.maxExecutors": null
+							},
+							"numExecutors": null
+						},
+						"linkedServiceName": {
+							"referenceName": "lnk_synapse",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-01-19T03:57:40Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/lnk_synapse')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ppl_data')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Source to Landing",
+						"type": "SynapseNotebook",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": {
+									"value": "Write to Landing",
+									"type": "Expression"
+								},
+								"type": "NotebookReference"
+							},
+							"snapshot": true,
+							"sparkPool": {
+								"referenceName": {
+									"value": "kyndryl",
+									"type": "Expression"
+								},
+								"type": "BigDataPoolReference"
+							},
+							"conf": {
+								"spark.dynamicAllocation.enabled": null,
+								"spark.dynamicAllocation.minExecutors": null,
+								"spark.dynamicAllocation.maxExecutors": null
+							},
+							"numExecutors": null
+						},
+						"linkedServiceName": {
+							"referenceName": "lnk_synapse",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Aprovisionamiento",
+						"type": "SynapseNotebook",
+						"dependsOn": [
+							{
+								"activity": "Source to Landing",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": {
+									"value": "Aprovisionamiento",
+									"type": "Expression"
+								},
+								"type": "NotebookReference"
+							},
+							"snapshot": true,
+							"sparkPool": {
+								"referenceName": {
+									"value": "kyndryl",
+									"type": "Expression"
+								},
+								"type": "BigDataPoolReference"
+							},
+							"conf": {
+								"spark.dynamicAllocation.enabled": null,
+								"spark.dynamicAllocation.minExecutors": null,
+								"spark.dynamicAllocation.maxExecutors": null
+							},
+							"numExecutors": null
+						},
+						"linkedServiceName": {
+							"referenceName": "lnk_synapse",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Landing to Staging",
+						"type": "SynapseNotebook",
+						"dependsOn": [
+							{
+								"activity": "Aprovisionamiento",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": {
+									"value": "Write to Staging",
+									"type": "Expression"
+								},
+								"type": "NotebookReference"
+							},
+							"snapshot": true,
+							"sparkPool": {
+								"referenceName": {
+									"value": "kyndryl",
+									"type": "Expression"
+								},
+								"type": "BigDataPoolReference"
+							},
+							"conf": {
+								"spark.dynamicAllocation.enabled": null,
+								"spark.dynamicAllocation.minExecutors": null,
+								"spark.dynamicAllocation.maxExecutors": null
+							},
+							"numExecutors": null
+						},
+						"linkedServiceName": {
+							"referenceName": "lnk_synapse",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-01-16T22:27:47Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/lnk_synapse')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/lnk_synapse')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSynapseArtifacts",
+				"typeProperties": {
+					"endpoint": "[parameters('lnk_synapse_properties_typeProperties_endpoint')]",
+					"authentication": "MSI",
+					"workspaceResourceId": "/subscriptions/e4516ad2-d1ef-463b-817c-b2a88c0b12bd/resourceGroups/rg-kyndryl/providers/Microsoft.Synapse/workspaces/synwkyndryl"
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
